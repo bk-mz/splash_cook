@@ -16,9 +16,8 @@ namespace SplashCook
 		{
 			public static Topping FromSting(string @string)
 			{
-				const string test = @"304,4,Century_Gothic,30,Bold,#1a4780,TEXT_BLA_BLA_BLA111222.dfmv-#@";
-				//\d+.\d+,\w+,\d+,Bold|Normal,[a-fA-F0-9]{6}
-				var rgx = new Regex(@"(\d+),(\d+),(\w+),(\d+),(Bold|Normal),(#[a-fA-F0-9]{6}),(.+)");
+				const string test = @"304,4,Century_Gothic,30,Bold,#1a4780,TEXT_BLA_BLA_BLA111222.dfmv-#@";				
+				var rgx = new Regex(@"(\d+),(\d+),(\w+),(\d+),(Bold|Normal),(#[a-fA-F0-9]{8}),(.+)");
 				var m = rgx.Match(@string);
 				var topRightPoint = new Point(
 					x:int.Parse(m.Groups[1].Value), 
@@ -41,16 +40,15 @@ namespace SplashCook
 
 		static void Main(string[] args)
 		{
-			if (args.Length <= 4)
+			if (args.Length < 4)
 			{
 				PrintHelp();
 				return;
 			}
 
 			var InputPath = args[0];
-			var OutputPath = args[1];
-			var showInstantly = args[2].EndsWith("yes");
-			var IsBitmap = InputPath.EndsWith(".bmp");
+			var OutputPath = args[1] == "GUID" ? Guid.NewGuid() + ".png" : args[1];
+			var showInstantly = args[2].EndsWith("yes");		
 			var toppings = args.Skip(3).Select(Topping.FromSting).ToArray();
 
 			var fileInfo = new FileInfo(InputPath);
@@ -75,8 +73,8 @@ namespace SplashCook
 				PixelFormats.Pbgra32);
 			renderTargetBitmap.Render(visual);
 			var bitmapFrame = BitmapFrame.Create(renderTargetBitmap);
-			BitmapEncoder encoder = IsBitmap ? (BitmapEncoder)new BmpBitmapEncoder() : new PngBitmapEncoder();
-
+			
+			var encoder = new PngBitmapEncoder();
 			encoder.Frames.Add(bitmapFrame);
 			using (var stream = File.OpenWrite(OutputPath))
 				encoder.Save(stream);
@@ -106,7 +104,7 @@ TEXT		:Replace spaces with underscores
 
 Examples:
 
-splash_cook.exe ..\Res\SplashTemplate.png ..\Res\Splash.png --show-result=no 304,4,Verdana,30,Bold,#1a4780,Hello 100,500,Comic_Sans,5,Bold,#000000,Brothers_and_sisters");
+splash_cook.exe ..\Res\SplashTemplate.png ..\Res\Splash.png --show-result=no 304,4,Verdana,30,Bold,#1a004780,Hello 100,500,Comic_Sans,5,Bold,#00000000,Brothers_and_sisters");
 		}
 	}
 
