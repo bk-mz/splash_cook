@@ -41,11 +41,17 @@ namespace SplashCook
 
 		static void Main(string[] args)
 		{
+			if (args.Length <= 4)
+			{
+				PrintHelp();
+				return;
+			}
+
 			var InputPath = args[0];
 			var OutputPath = args[1];
 			var showInstantly = args[2].EndsWith("yes");
 			var IsBitmap = InputPath.EndsWith(".bmp");
-			var toppings = args.Skip(2).Select(Topping.FromSting).ToArray();
+			var toppings = args.Skip(3).Select(Topping.FromSting).ToArray();
 
 			var fileInfo = new FileInfo(InputPath);
 			var originalImageSource = BitmapFrame.Create(new Uri(fileInfo.FullName));
@@ -78,5 +84,30 @@ namespace SplashCook
 			if (showInstantly)
 				Process.Start(OutputPath);
 		}
+
+		static void PrintHelp()
+		{
+			Console.WriteLine(@"Console utility for Splash Screen bitmap generation with custom provided text. Usage:
+splash_cook.exe input-file output-file flags ... [args] ...
+
+input-file		: Relative path for original image
+output-file		: Relative path for resulting image
+
+Flags :
+--show-result=[yes|no]	: shows external image viewer with result
+
+Args should be specified at least one, or many, in format as strict as such:
+X,Y,FONT_NAME,SIZE,WEIGHT,#HEX_COLOR,TEXT_WITH_UNDERSCORES
+
+Specifics:
+X,Y		:two coordinates relative to top left corner (0,0 is top left)
+WEIGHT		:Bold or Normal
+TEXT		:Replace spaces with underscores
+
+Examples:
+
+splash_cook.exe ..\Res\SplashTemplate.png ..\Res\Splash.png --show-result=no 304,4,Verdana,30,Bold,#1a4780,Hello 100,500,Comic_Sans,5,Bold,#000000,Brothers_and_sisters");
+		}
 	}
+
 }
