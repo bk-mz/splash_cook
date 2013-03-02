@@ -61,10 +61,11 @@ namespace SplashCook
 							weight:t.FontWeight == "Bold" ? FontWeights.Bold : FontWeights.Normal,
 							stretch:FontStretches.Normal), 
 							emSize:t.FontSize, 
-							foreground:(Brush)new BrushConverter().ConvertFrom(t.FontColorHex));
+							foreground:(Brush)new BrushConverter().ConvertFrom(t.FontColorHex), 
+							numberSubstitution:null, textFormattingMode:TextFormattingMode.Ideal);					
 
 					drawingContext.DrawText(formattedText, 
-						origin:new Point(topRightPoint.X - formattedText.Width, topRightPoint.Y));
+						origin:new Point(topRightPoint.X, topRightPoint.Y));
 				}
 			}
 
@@ -96,6 +97,7 @@ Specifics:
 X,Y		:two coordinates relative to top left corner (0,0 is top left)
 WEIGHT		:Bold or Normal
 TEXT		:Replace spaces with underscores
+#HEX_COLOR	:4 bytes, e.g. #00000000
 
 Examples:
 
@@ -120,9 +122,11 @@ splash_cook.exe ..\Res\SplashTemplate.png ..\Res\Splash.png --show-result=no 304
 
 			public static Topping FromSting(string @string)
 			{
-				const string test = @"304,4,Century_Gothic,30,Bold,#1a4780,TEXT_BLA_BLA_BLA111222.dfmv-#@";
+				const string test = @"304,4,Century_Gothic,30,Bold,#1abb4780,TEXT_BLA_BLA_BLA111222.dfmv-#@";
 				var rgx = new Regex(@"(\d+),(\d+),(\w+),(\d+),(Bold|Normal),(#[a-fA-F0-9]{8}),(.+)");
 				Match m = rgx.Match(@string);
+				if (!m.Success)
+					throw new ArgumentException(string.Format("Regex {0} does not match!", @string));
 
 				return new Topping
 				{
@@ -131,8 +135,8 @@ splash_cook.exe ..\Res\SplashTemplate.png ..\Res\Splash.png --show-result=no 304
 					FontName = m.Groups[3].Value.Replace('_', ' '),
 					FontSize = int.Parse(m.Groups[4].Value),
 					FontWeight = m.Groups[5].Value,
-					Text = m.Groups[7].Value.Replace('_', ' '),
 					FontColorHex = m.Groups[6].Value,
+					Text = m.Groups[7].Value.Replace('_', ' '),					
 				};
 			}
 		}
