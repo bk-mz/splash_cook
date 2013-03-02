@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -12,32 +13,6 @@ namespace SplashCook
 {
 	class Program
 	{
-		class Topping
-		{
-			public static Topping FromSting(string @string)
-			{
-				const string test = @"304,4,Century_Gothic,30,Bold,#1a4780,TEXT_BLA_BLA_BLA111222.dfmv-#@";				
-				var rgx = new Regex(@"(\d+),(\d+),(\w+),(\d+),(Bold|Normal),(#[a-fA-F0-9]{8}),(.+)");
-				var m = rgx.Match(@string);
-				var topRightPoint = new Point(
-					x:int.Parse(m.Groups[1].Value), 
-					y:int.Parse(m.Groups[2].Value));
-				var fontFamily = new FontFamily(m.Groups[3].Value.Replace('_', ' '));
-				var emSize = int.Parse(m.Groups[4].Value);
-				var fontWeight = m.Groups[5].Value == "Bold" ? FontWeights.Bold : FontWeights.Normal; // todo parse
-				var typeFace = new Typeface(fontFamily, FontStyles.Normal, fontWeight, FontStretches.Normal);
-				var brush = (Brush)new BrushConverter().ConvertFrom(m.Groups[6].Value);				
-				var formattedText = new FormattedText(m.Groups[7].Value.Replace('_', ' '), 
-					CultureInfo.InvariantCulture, 
-					FlowDirection.LeftToRight, 
-					typeFace, emSize, brush);
-				return new Topping {FormattedText = formattedText, TopRightPoint = topRightPoint};
-			}
-			
-			public Point TopRightPoint;
-			public FormattedText FormattedText;
-		}
-
 		static void Main(string[] args)
 		{
 			if (args.Length < 4)
@@ -46,41 +21,55 @@ namespace SplashCook
 				return;
 			}
 
-			var InputPath = args[0];
-			var OutputPath = args[1] == "GUID" ? Guid.NewGuid() + ".png" : args[1];
-			var showInstantly = args[2].EndsWith("yes");		
+			var inputPath = args[0];
+			var outputPath = args[1] == "GUID" ? Guid.NewGuid() + ".png" : args[1];
+			var showInstantly = args[2].EndsWith("yes");
 			var toppings = args.Skip(3).Select(Topping.FromSting).ToArray();
+			var bitmapFrame = Render(inputPath, toppings);
 
-			var fileInfo = new FileInfo(InputPath);
-			var originalImageSource = BitmapFrame.Create(new Uri(fileInfo.FullName));
-			var visual = new DrawingVisual();
-
-			using (var drawingContext = visual.RenderOpen())
-			{
-				drawingContext.DrawImage(originalImageSource, new Rect(0, 0, originalImageSource.PixelWidth, originalImageSource.PixelHeight));
-				foreach (var topping in toppings)
-				{
-					var point = new Point(topping.TopRightPoint.X - topping.FormattedText.Width, topping.TopRightPoint.Y);
-					drawingContext.DrawText(topping.FormattedText, point);
-				}				
-			}
-
-			var renderTargetBitmap = new RenderTargetBitmap(
-				originalImageSource.PixelWidth, 
-				originalImageSource.PixelHeight, 
-				originalImageSource.DpiX, 
-				originalImageSource.DpiY, 
-				PixelFormats.Pbgra32);
-			renderTargetBitmap.Render(visual);
-			var bitmapFrame = BitmapFrame.Create(renderTargetBitmap);
-			
 			var encoder = new PngBitmapEncoder();
 			encoder.Frames.Add(bitmapFrame);
-			using (var stream = File.OpenWrite(OutputPath))
+			using (var stream = File.OpenWrite(outputPath))
 				encoder.Save(stream);
 
 			if (showInstantly)
-				Process.Start(OutputPath);
+				Process.Start(outputPath);
+		}
+
+		static BitmapFrame Render(string inputPath, IEnumerable<Topping> toppings)
+		{
+			var fileInfo = new FileInfo(inputPath);
+			BitmapFrame originalImageSource = BitmapFrame.Create(new Uri(fileInfo.FullName));
+			var visual = new DrawingVisual();
+
+			using (DrawingContext drawingContext = visual.RenderOpen())
+			{
+				drawingContext.DrawImage(originalImageSource,
+					new Rect(0, 0, originalImageSource.PixelWidth, originalImageSource.PixelHeight));
+				foreach (Topping t in toppings)
+				{
+					var topRightPoint = new Point(t.X, t.Y);
+					var fontFamily = new FontFamily(t.FontName);
+					FontWeight fontWeight = t.FontWeight == "Bold" ? FontWeights.Bold : FontWeights.Normal;// todo parse moar
+					var typeFace = new Typeface(fontFamily, FontStyles.Normal, fontWeight, FontStretches.Normal);
+					var brush = (Brush)new BrushConverter().ConvertFrom(t.FontColorHex);
+					var formattedText = new FormattedText(t.Text,
+						CultureInfo.InvariantCulture,
+						FlowDirection.LeftToRight,
+						typeFace, t.FontSize, brush);
+					var point = new Point(topRightPoint.X - formattedText.Width, topRightPoint.Y);
+					drawingContext.DrawText(formattedText, point);
+				}
+			}
+
+			var renderTargetBitmap = new RenderTargetBitmap(
+				originalImageSource.PixelWidth,
+				originalImageSource.PixelHeight,
+				originalImageSource.DpiX,
+				originalImageSource.DpiY,
+				PixelFormats.Pbgra32);
+			renderTargetBitmap.Render(visual);
+			return BitmapFrame.Create(renderTargetBitmap);
 		}
 
 		static void PrintHelp()
@@ -106,6 +95,40 @@ Examples:
 
 splash_cook.exe ..\Res\SplashTemplate.png ..\Res\Splash.png --show-result=no 304,4,Verdana,30,Bold,#1a004780,Hello 100,500,Comic_Sans,5,Bold,#00000000,Brothers_and_sisters");
 		}
-	}
 
+		class Topping
+		{
+			public string FontColorHex;
+
+			public string FontName;
+
+			public int FontSize;
+
+			public string FontWeight;
+
+			public string Text;
+
+			public int X;
+
+			public int Y;
+
+			public static Topping FromSting(string @string)
+			{
+				const string test = @"304,4,Century_Gothic,30,Bold,#1a4780,TEXT_BLA_BLA_BLA111222.dfmv-#@";
+				var rgx = new Regex(@"(\d+),(\d+),(\w+),(\d+),(Bold|Normal),(#[a-fA-F0-9]{8}),(.+)");
+				Match m = rgx.Match(@string);
+
+				return new Topping
+				{
+					X = int.Parse(m.Groups[1].Value),
+					Y = int.Parse(m.Groups[2].Value),
+					FontName = m.Groups[3].Value.Replace('_', ' '),
+					FontSize = int.Parse(m.Groups[4].Value),
+					FontWeight = m.Groups[5].Value,
+					Text = m.Groups[7].Value.Replace('_', ' '),
+					FontColorHex = m.Groups[6].Value,
+				};
+			}
+		}
+	}
 }
