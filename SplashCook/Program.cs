@@ -39,35 +39,41 @@ namespace SplashCook
 		static BitmapFrame Render(string inputPath, IEnumerable<Topping> toppings)
 		{
 			var fileInfo = new FileInfo(inputPath);
-			BitmapFrame originalImageSource = BitmapFrame.Create(new Uri(fileInfo.FullName));
+			var bitmap = BitmapFrame.Create(new Uri(fileInfo.FullName));
 			var visual = new DrawingVisual();
 
 			using (DrawingContext drawingContext = visual.RenderOpen())
 			{
-				drawingContext.DrawImage(originalImageSource,
-					new Rect(0, 0, originalImageSource.PixelWidth, originalImageSource.PixelHeight));
-				foreach (Topping t in toppings)
+				drawingContext.DrawImage(
+					imageSource:bitmap, 
+					rectangle:new Rect(x:0, y:0, width:bitmap.Width, height:bitmap.Height));
+
+				foreach (var t in toppings)
 				{
 					var topRightPoint = new Point(t.X, t.Y);
-					var fontFamily = new FontFamily(t.FontName);
-					FontWeight fontWeight = t.FontWeight == "Bold" ? FontWeights.Bold : FontWeights.Normal;// todo parse moar
-					var typeFace = new Typeface(fontFamily, FontStyles.Normal, fontWeight, FontStretches.Normal);
-					var brush = (Brush)new BrushConverter().ConvertFrom(t.FontColorHex);
+					
 					var formattedText = new FormattedText(t.Text,
 						CultureInfo.InvariantCulture,
-						FlowDirection.LeftToRight,
-						typeFace, t.FontSize, brush);
-					var point = new Point(topRightPoint.X - formattedText.Width, topRightPoint.Y);
-					drawingContext.DrawText(formattedText, point);
+						FlowDirection.LeftToRight, 
+						typeface:new Typeface(
+							fontFamily:new FontFamily(t.FontName), 
+							style:FontStyles.Normal, 
+							weight:t.FontWeight == "Bold" ? FontWeights.Bold : FontWeights.Normal,
+							stretch:FontStretches.Normal), 
+							emSize:t.FontSize, 
+							foreground:(Brush)new BrushConverter().ConvertFrom(t.FontColorHex));
+
+					drawingContext.DrawText(formattedText, 
+						origin:new Point(topRightPoint.X - formattedText.Width, topRightPoint.Y));
 				}
 			}
 
 			var renderTargetBitmap = new RenderTargetBitmap(
-				originalImageSource.PixelWidth,
-				originalImageSource.PixelHeight,
-				originalImageSource.DpiX,
-				originalImageSource.DpiY,
-				PixelFormats.Pbgra32);
+				bitmap.PixelWidth,
+				bitmap.PixelHeight,
+				bitmap.DpiX,
+				bitmap.DpiY,
+				PixelFormats.Default);
 			renderTargetBitmap.Render(visual);
 			return BitmapFrame.Create(renderTargetBitmap);
 		}
